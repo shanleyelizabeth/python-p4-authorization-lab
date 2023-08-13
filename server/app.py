@@ -84,15 +84,30 @@ class CheckSession(Resource):
         
         return {}, 401
 
+@app.before_request
+def check_if_logged_in():
+    # If the endpoint is one of the member-only routes, check if the user is logged in
+    if request.endpoint in ['member_index', 'member_article']:
+        if not session.get('user_id'):
+            return {'error': 'Unauthorized'}, 401
+
 class MemberOnlyIndex(Resource):
     
     def get(self):
-        pass
+        
+        articles = [article.to_dict() for article in Article.query.filter_by(is_member_only=True).all()]
+        return make_response(articles, 200)
 
 class MemberOnlyArticle(Resource):
     
     def get(self, id):
-        pass
+
+        
+        article = Article.query.filter(Article.id == id).first()
+        if not article:
+            return make_response({'message': 'Article not found.'}, 404)
+        
+        return make_response(article.to_dict(), 200)
 
 api.add_resource(ClearSession, '/clear', endpoint='clear')
 api.add_resource(IndexArticle, '/articles', endpoint='article_list')
